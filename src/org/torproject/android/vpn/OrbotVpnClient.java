@@ -53,8 +53,8 @@ public class OrbotVpnClient extends Activity implements View.OnClickListener {
     @Override
     protected void onActivityResult(int request, int result, Intent data) {
         if (result == RESULT_OK) {
-            Intent intentS = new Intent(this, ServerLog.class);
-            startService(intentS);
+            //Intent intentS = new Intent(this, ServerLog.class);
+            //startService(intentS);
             
             Intent intent = new Intent(this, OrbotVpnService.class);
             startService(intent);

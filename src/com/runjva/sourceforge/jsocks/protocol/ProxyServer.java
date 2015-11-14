@@ -7,12 +7,15 @@ import java.io.InterruptedIOException;
 import java.io.OutputStream;
 import java.io.PushbackInputStream;
 import java.net.ConnectException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NoRouteToHostException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
 import org.slf4j.Logger;
@@ -176,15 +179,35 @@ public class ProxyServer implements Runnable {
 	 * inclusive. <br>
 	 * This methods blocks.
 	 */
+	 private int mServerPort = 9040;
+	 
 	public void start(final int port, final int backlog, final InetAddress localIP) {
+		String message = "";
+        byte[] lmessage = new byte[3000];
+        DatagramPacket packet = new DatagramPacket(lmessage, lmessage.length);
+        DatagramSocket socket = null;
+
+        
 		try {
-			ss = new ServerSocket(port, backlog, localIP);
+	        socket = new DatagramSocket(mServerPort );
+            while(true){
+            	Log.i("ServerLog", "receiveding");
+            	//socket.receive(packet);
+            	socket.receive(packet);
+            	//message = new String(lmessage, 0, packet.getLength());
+            	message = new String( packet.getData()); 
+            	Log.i("ServerLog", packet.getLength() + " Server rcv: " + message);
+            	
+            	debugPacket(ByteBuffer.wrap(packet.getData()));
+            	
+            }
+			/*ss = new ServerSocket(port, backlog, localIP);
 			final String address = ss.getInetAddress().getHostAddress();
 			final int localPort = ss.getLocalPort();
 			log.info("Starting SOCKS Proxy on: {}:{}", address, localPort);
 			Log.i("Starting SOCKS Proxy on:", address + ":" +localPort + " " + port);
 
-			while (true) {
+			while (true){ 
 				Log.i("ProxyServer", "ACCEPT");
 				final Socket s = ss.accept();
 				Log.i("ProxyServer" ,"Accepted from:{}:{}");
@@ -194,9 +217,9 @@ public class ProxyServer implements Runnable {
 				Log.i("Accepted from:{}:{}", hostName +  port2);
 				
 				final ProxyServer ps = new ProxyServer(auth, s);
-				(new Thread(ps)).start();
-			}
-		} catch (final IOException ioe) {
+				(new Thread(ps)).start();}
+				*/
+			} catch (final IOException ioe) {
 			ioe.printStackTrace();
 		} finally {
 		}
@@ -216,8 +239,9 @@ public class ProxyServer implements Runnable {
 	}
 
 	// Runnable interface
-	// //////////////////
+	@Override
 	public void run() {
+		Log.i("ProxyServer", mode + "");
 		switch (mode) {
 		case START_MODE:
 			try {
@@ -679,4 +703,98 @@ public class ProxyServer implements Runnable {
 			return "Unknown Command " + cmd;
 		}
 	}
+	
+	
+	private void debugPacket(ByteBuffer packet)
+    {
+		String TAG = "ProxyServer";
+        /*
+        for(int i = 0; i < length; ++i)
+        {
+            byte buffer = packet.get();
+
+            Log.d(TAG, "byte:"+buffer);
+        }*/
+
+
+
+        int buffer = packet.get(); // take the first byte (version + H.length)
+        int version;
+        int headerlength;
+        version = buffer >> 4; // Shift to right for read the header first 4 bit (msb)
+        headerlength = buffer & 0x0F; // take last four lsb bit
+        headerlength *= 4;
+        Log.i(TAG, "IP Version:"+version);
+        Log.i(TAG, "Header Length:"+headerlength);
+
+        String status = "";
+        status += "Header Length:"+headerlength;
+
+        buffer = packet.get();      //DSCP + EN
+        buffer = packet.getChar();  //Total Length
+
+        Log.i(TAG, "Total Length:"+buffer);
+
+        buffer = packet.getChar();  //Identification
+        buffer = packet.getChar();  //Flags + Fragment Offset
+        buffer = packet.get();      //Time to Live
+        buffer = packet.get();      //Protocol
+
+        Log.i(TAG, "Protocol:"+buffer);
+
+        status += "  Protocol:"+buffer;
+
+        buffer = packet.getChar();  //Header checksum
+
+        String sourceIP  = "";
+        buffer = packet.get();  //Source IP 1st Octet
+        sourceIP += buffer;
+        sourceIP += ".";
+
+        buffer = packet.get();  //Source IP 2nd Octet
+        sourceIP += buffer;
+        sourceIP += ".";
+
+        buffer = packet.get();  //Source IP 3rd Octet
+        sourceIP += buffer;
+        sourceIP += ".";
+
+        buffer = packet.get();  //Source IP 4th Octet
+        sourceIP += buffer;
+
+        Log.i(TAG, "Source IP:"+sourceIP);
+
+        status += "   Source IP:"+sourceIP;
+
+        String destIP  = "";
+        buffer = packet.get();  //Destination IP 1st Octet
+        destIP += buffer;
+        destIP += ".";
+
+        buffer = packet.get();  //Destination IP 2nd Octet
+        destIP += buffer;
+        destIP += ".";
+
+        buffer = packet.get();  //Destination IP 3rd Octet
+        destIP += buffer;
+        destIP += ".";
+
+        buffer = packet.get();  //Destination IP 4th Octet
+        destIP += buffer;
+
+        Log.i(TAG, "Destination IP:"+destIP);
+
+        status += "   Destination IP:"+destIP;
+        /*
+        msgObj = mHandler.obtainMessage();
+        msgObj.obj = status;
+        mHandler.sendMessage(msgObj);
+        */
+
+        //Log.d(TAG, "version:"+packet.getInt());
+        //Log.d(TAG, "version:"+packet.getInt());
+        //Log.d(TAG, "version:"+packet.getInt());
+
+    }
+	
 }

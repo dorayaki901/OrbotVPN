@@ -18,9 +18,13 @@ package org.torproject.android.vpn;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -70,7 +74,7 @@ public class OrbotVpnService extends VpnService implements Handler.Callback, Run
         mThread = new Thread(this, "OrbotVpnThread");
         mThread.start();
      
-        //startSocksBypass ();
+        startSocksBypass ();
         
         return START_STICKY;
     }
@@ -83,7 +87,7 @@ public class OrbotVpnService extends VpnService implements Handler.Callback, Run
 	    	{
 	    
 		       try {
-					Socks5Proxy p = new Socks5Proxy("127.0.0.1",9999);
+		    	   	// Socks5Proxy p = new Socks5Proxy("127.0.0.1",mSocksProxyPort);
 		        	/////////////////////////////////////////////////////
 		        	
 		        	////////////////////////////////////////
@@ -188,10 +192,10 @@ public class OrbotVpnService extends VpnService implements Handler.Callback, Run
             mHandler.sendEmptyMessage(R.string.disconnected);
             Log.i(TAG, "Exiting");
         }
-    }*/
-
-    DatagramChannel mTunnel = null;
+    }
+*/
     
+    DatagramChannel mTunnel = null;
     
     private boolean run(InetSocketAddress server) throws Exception {
         boolean connected = false;
@@ -209,7 +213,24 @@ public class OrbotVpnService extends VpnService implements Handler.Callback, Run
             // For simplicity, we use the same thread for both reading and
             // writing. Here we put the tunnel into non-blocking mode.
             mTunnel.configureBlocking(false);
-
+            Thread.sleep(3000);
+            Log.i("ciao","ciao");
+            final DatagramSocket clientSocket = new DatagramSocket();
+            InetAddress IPAddress = InetAddress.getByName("localhost");
+            byte[] sendData = new byte[1024];
+            byte[] receiveData = new byte[1024];
+            String sentence = "CIAO1";
+            sendData = sentence.getBytes();
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 9040);
+            clientSocket.send(sendPacket); 
+     
+            
+            Thread.sleep(3000);
+           /* final OutputStream streamToServer = server1.getOutputStream();
+            byte packet1[]={1,3,4,5,3,3,4};
+            streamToServer.write(packet1, 0,packet1.length);
+            streamToServer.flush();*/
+            
             // Authenticate and configure the virtual network interface.
             handshake();
 
@@ -242,9 +263,19 @@ public class OrbotVpnService extends VpnService implements Handler.Callback, Run
                     	
                     	try
                     	{
+                    		/*byte[] sendData = new byte[1024];
+                            byte[] receiveData = new byte[1024];
+                            String sentence = "CIAO1";
+                            sendData = sentence.getBytes();
+                            InetAddress IPAddress = InetAddress.getByName("localhost");
+                    		DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, IPAddress, 9040);
+                            clientSocket.send(sendPacket); 
+                            Thread.sleep(1000);*/
 	                        // Assume that we did not make any progress in this iteration.
 	                        boolean idle = true;
-	
+	                       
+//	                      mTunnel.write(packet.putChar('a'));
+//	                      packet.clear();
 	                        // Read the outgoing packet from the input stream.
 	                        int length = in.read(packet.array());
 	                        //Log.i("OrbotVPNService", "length: " + length);
@@ -254,6 +285,11 @@ public class OrbotVpnService extends VpnService implements Handler.Callback, Run
 	                            // Write the outgoing packet to the tunnel.
 	                            packet.limit(length);
 	                            debugPacket(packet);
+	
+	                            InetAddress IPAddress = InetAddress.getByName("localhost");
+	                    		DatagramPacket sendPacket = new DatagramPacket(packet.array(), length , IPAddress, 9040);
+	                            clientSocket.send(sendPacket); 
+	                            Thread.sleep(5000);
 	                            
 	                            int a = mTunnel.write(packet);
 	                            Log.d(TAG,"SIZE " + a + " " + packet.capacity() );
